@@ -1,0 +1,7 @@
+﻿services:
+  lingua.api:
+    image: lingua.api
+    build:
+      context: .
+      dockerfile: Lingua.Api/Dockerfile
+

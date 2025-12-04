@@ -1,0 +1,29 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Lingua.Core\Lingua.Core.csproj" />
+  </ItemGroup>
+
+  <!-- Copy Tools directory to output directory -->
+  <ItemGroup>
+    <None Include="Tools\yt-dlp.exe" Condition="Exists('Tools\yt-dlp.exe')">
+      <Link>Tools\yt-dlp.exe</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Tools\yt-dlp" Condition="Exists('Tools\yt-dlp')">
+      <Link>Tools\yt-dlp</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+</Project>

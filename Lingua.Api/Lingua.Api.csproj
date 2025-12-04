@@ -1,0 +1,47 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+    <PropertyGroup>
+        <TargetFramework>net9.0</TargetFramework>
+        <Nullable>enable</Nullable>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="9.0.10" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <Content Include="..\.dockerignore">
+        <Link>.dockerignore</Link>
+      </Content>
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\Lingua.Core\Lingua.Core.csproj" />
+      <ProjectReference Include="..\Lingua.Infrastructure\Lingua.Infrastructure.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <!-- Copy yt-dlp from Infrastructure Tools directory to output directory -->
+      <!-- Also keep backward compatibility with old tools directory -->
+      <None Include="..\Lingua.Infrastructure\Tools\yt-dlp.exe" Condition="Exists('..\Lingua.Infrastructure\Tools\yt-dlp.exe')">
+        <Link>tools\yt-dlp.exe</Link>
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
+      <None Include="..\Lingua.Infrastructure\Tools\yt-dlp" Condition="Exists('..\Lingua.Infrastructure\Tools\yt-dlp')">
+        <Link>tools\yt-dlp</Link>
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
+      <!-- Backward compatibility: also check old tools directory -->
+      <None Include="..\tools\yt-dlp.exe" Condition="Exists('..\tools\yt-dlp.exe') And !Exists('..\Lingua.Infrastructure\Tools\yt-dlp.exe')">
+        <Link>tools\yt-dlp.exe</Link>
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
+      <None Include="..\tools\yt-dlp" Condition="Exists('..\tools\yt-dlp') And !Exists('..\Lingua.Infrastructure\Tools\yt-dlp')">
+        <Link>tools\yt-dlp</Link>
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
+    </ItemGroup>
+
+</Project>

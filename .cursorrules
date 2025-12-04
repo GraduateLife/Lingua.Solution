@@ -1,0 +1,65 @@
+# Cursor Rules for Lingua Solution
+
+## Chat History Management
+
+When engaging in conversations, especially for important decisions, feature discussions, or problem-solving sessions:
+
+1. **Auto-document important conversations**: At the end of significant conversations or when explicitly asked, create or update files in the `.chat/` folder to document:
+
+   - Key decisions made
+   - Problems solved
+   - Features discussed
+   - Code changes requested
+   - Architecture discussions
+
+2. **Conversation file format**:
+
+   - Use markdown format
+   - Include timestamps when possible
+   - Organize by date: `.chat/YYYY-MM-DD-conversation.md`
+   - Or by topic: `.chat/topics/[topic-name].md`
+   - Use clear headings and structure
+
+3. **When to save conversations**:
+
+   - After solving a complex problem
+   - When making architectural decisions
+   - When discussing feature requirements
+   - When the user explicitly asks to save the conversation
+   - At the end of multi-turn conversations that result in code changes
+
+4. **File structure**:
+
+   - Create the `.chat/` folder if it doesn't exist
+   - Maintain an index file (`.chat/README.md`) that links to all conversation files
+   - Keep conversations organized and searchable
+
+5. **Conversation content should include**:
+   - User's questions/requests
+   - AI's responses and suggestions
+   - Code changes made (if any)
+   - Decisions and rationale
+   - Follow-up actions or TODOs
+
+## Project Context
+
+This is a .NET 9.0 solution with:
+
+- **Lingua.Api**: ASP.NET Core Web API
+- **Lingua.Web**: Blazor Web App
+- **Lingua.Core**: Shared core library with models and services
+
+## Coding Standards
+
+- Use C# 12 features where appropriate
+- Follow .NET naming conventions
+- Keep services in the Core project for reusability
+- Use dependency injection for service management
+- Follow RESTful API design principles
+
+## File Organization
+
+- Keep business logic in the Core project
+- API controllers should be thin and delegate to services
+- Blazor components should focus on UI logic
+- Shared models go in Lingua.Core/Models
