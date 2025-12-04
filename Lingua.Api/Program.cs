@@ -63,11 +63,13 @@ app.MapGet("/api/test/echo", (ILogger<Program> logger) =>
         return Results.Ok(new { received = "Hello, World!" });
     });
 
-// Video download test endpoint (GET) - Returns JSON status instead of video stream
-// Useful for testing in browser to see download status and results
+// Video metadata endpoint (GET) - Returns metadata of already downloaded videos
+// Only checks for existing files, does not download
 app.MapGet("/api/video/download/test", async (
     string? url,
     IVideoDownloadService service,
+    IDownloadDirectoryManager directoryManager,
+    IVideoFileNameGenerator fileNameGenerator,
     ILogger<Program> logger,
     CancellationToken cancellationToken) =>
     {
@@ -81,82 +83,54 @@ app.MapGet("/api/video/download/test", async (
             return Results.BadRequest(new { error = "Invalid URL format" });
         }
 
-        logger.LogInformation("Received GET video download test request for: {VideoUrl}", url);
+        logger.LogInformation("Received GET video metadata request for: {VideoUrl}", url);
 
         try
         {
-            logger.LogInformation("Starting video download process...");
-            var startTime = DateTime.UtcNow;
+            // Generate filename to check
+            var fileName = fileNameGenerator.GenerateFileName(url);
+            var fileNameWithoutExt = Path.GetFileNameWithoutExtension(fileName);
+            var downloadDirectory = directoryManager.GetDownloadDirectory();
 
-            // Download video using yt-dlp
-            var downloadTask = service.DownloadVideoAsync(url, cancellationToken);
-            logger.LogInformation("Waiting for video download to complete...");
+            // Find the downloaded file
+            var files = Directory.GetFiles(downloadDirectory, $"{fileNameWithoutExt}.*");
+            var existingFile = files.FirstOrDefault();
 
-            Stream? videoStream = null;
-            try
+            if (string.IsNullOrEmpty(existingFile) || !File.Exists(existingFile))
             {
-                videoStream = await downloadTask;
-                var endTime = DateTime.UtcNow;
-                var duration = endTime - startTime;
-
-                var fileName = service.GenerateVideoFileName(url);
-                logger.LogInformation("Got filename: {FileName}", fileName);
-
-                if (videoStream == null)
-                {
-                    logger.LogError("Video stream is null");
-                    return Results.Ok(new
-                    {
-                        success = false,
-                        error = "视频流为空",
-                        url = url,
-                        duration = duration.TotalSeconds
-                    });
-                }
-
-                var fileLength = videoStream.CanSeek ? videoStream.Length : -1;
-                logger.LogInformation("Video downloaded, file: {FileName}, Size: {Size} bytes",
-                    fileName, fileLength);
-
+                logger.LogInformation("Video file not found for: {VideoUrl}", url);
                 return Results.Ok(new
                 {
-                    success = true,
+                    success = false,
+                    exists = false,
                     url = url,
                     fileName = fileName,
-                    fileSize = fileLength,
-                    fileSizeFormatted = fileLength > 0 ? FormatFileSize(fileLength) : "unknown",
-                    duration = duration.TotalSeconds,
-                    message = "视频下载成功",
+                    message = "视频文件不存在，请先下载"
                 });
             }
-            finally
-            {
-                videoStream?.Dispose();
-            }
-        }
-        catch (ArgumentException ex)
-        {
-            logger.LogWarning(ex, "Invalid argument in video download request");
-            return Results.BadRequest(new
-            {
-                success = false,
-                error = ex.Message,
-                url = url
-            });
-        }
-        catch (OperationCanceledException)
-        {
-            logger.LogWarning("Video download was cancelled");
+
+            // Get file metadata
+            var fileInfo = new FileInfo(existingFile);
+            logger.LogInformation("Found video file: {FileName}, Size: {Size} bytes",
+                existingFile, fileInfo.Length);
+
             return Results.Ok(new
             {
-                success = false,
-                error = "下载被取消",
-                url = url
+                success = true,
+                exists = true,
+                url = url,
+                fileName = Path.GetFileName(existingFile),
+                filePath = existingFile,
+                fileSize = fileInfo.Length,
+                fileSizeFormatted = FormatFileSize(fileInfo.Length),
+                createdTime = fileInfo.CreationTimeUtc,
+                modifiedTime = fileInfo.LastWriteTimeUtc,
+                message = "视频文件已存在"
             });
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Error in video download test: {Message}", ex.Message);
+            logger.LogError(ex, "Error checking video metadata: {Message}", ex.Message);
             return Results.Ok(new
             {
                 success = false,
@@ -166,7 +140,7 @@ app.MapGet("/api/video/download/test", async (
             });
         }
     })
-    .WithName("DownloadVideoTest")
+    .WithName("GetVideoMetadata")
     .WithOpenApi();
 
 // Helper method to format file size
@@ -183,17 +157,13 @@ static string FormatFileSize(long bytes)
     return $"{len:0.##} {sizes[order]}";
 }
 
-// Video download endpoint (GET) - Proxy mode: backend downloads and streams the file
+// Video download endpoint (GET) - Downloads video and returns JSON metadata
 app.MapGet("/api/video/download", async (
     string? url,
     IVideoDownloadService service,
     ILogger<Program> logger,
-    HttpContext context,
     CancellationToken cancellationToken) =>
     {
-        // Get URL from query parameter or use default test URL
-        // var videoUrl = url ?? "http://vjs.zencdn.net/v/oceans.mp4";
-
         if (string.IsNullOrWhiteSpace(url))
         {
             return Results.BadRequest(new { error = "URL parameter is required" });
@@ -210,13 +180,15 @@ app.MapGet("/api/video/download", async (
         try
         {
             logger.LogInformation("Starting video download process...");
+            var startTime = DateTime.UtcNow;
 
-            // Download video using yt-dlp (backend acts as proxy)
-            // This may take some time, so we log progress
+            // Download video using yt-dlp
             var downloadTask = service.DownloadVideoAsync(url, cancellationToken);
             logger.LogInformation("Waiting for video download to complete...");
 
             videoStream = await downloadTask;
+            var endTime = DateTime.UtcNow;
+            var duration = endTime - startTime;
 
             var fileName = service.GenerateVideoFileName(url);
             logger.LogInformation("Got filename: {FileName}", fileName);
@@ -224,62 +196,64 @@ app.MapGet("/api/video/download", async (
             if (videoStream == null)
             {
                 logger.LogError("Video stream is null");
-                return Results.Problem("视频流为空", statusCode: 500);
+                return Results.Ok(new
+                {
+                    success = false,
+                    error = "视频流为空",
+                    url = url,
+                    duration = duration.TotalSeconds
+                });
             }
 
             var fileLength = videoStream.CanSeek ? videoStream.Length : -1;
-            logger.LogInformation("Video downloaded, streaming file: {FileName}, Size: {Size} bytes",
+            logger.LogInformation("Video downloaded, file: {FileName}, Size: {Size} bytes",
                 fileName, fileLength);
 
-            // Set response headers
-            context.Response.ContentType = "video/mp4";
-            context.Response.Headers.ContentDisposition = $"attachment; filename=\"{fileName}\"";
-            if (fileLength > 0)
+            // Return JSON metadata instead of streaming the video
+            return Results.Ok(new
             {
-                context.Response.ContentLength = fileLength;
-            }
-
-            // Stream the file directly to response
-            if (videoStream.CanSeek)
-            {
-                videoStream.Position = 0;
-            }
-
-            logger.LogInformation("Starting to stream video file to client");
-            await videoStream.CopyToAsync(context.Response.Body, cancellationToken);
-            logger.LogInformation("Video file streamed successfully");
-
-            return Results.Empty;
+                success = true,
+                url = url,
+                fileName = fileName,
+                fileSize = fileLength,
+                fileSizeFormatted = fileLength > 0 ? FormatFileSize(fileLength) : "unknown",
+                duration = duration.TotalSeconds,
+                message = "视频下载成功，可使用 /api/video/download/test?url={url} 查看详细信息"
+            });
         }
         catch (ArgumentException ex)
         {
             logger.LogWarning(ex, "Invalid argument in video download request");
             videoStream?.Dispose();
-            return Results.BadRequest(new { error = ex.Message });
+            return Results.BadRequest(new
+            {
+                success = false,
+                error = ex.Message,
+                url = url
+            });
         }
         catch (OperationCanceledException)
         {
             logger.LogWarning("Video download was cancelled");
             videoStream?.Dispose();
-            return Results.StatusCode(499);
+            return Results.Ok(new
+            {
+                success = false,
+                error = "下载被取消",
+                url = url
+            });
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Error in video download proxy: {Message}", ex.Message);
+            logger.LogError(ex, "Error in video download: {Message}", ex.Message);
             videoStream?.Dispose();
-
-            // Only return error if response hasn't started
-            if (!context.Response.HasStarted)
+            return Results.Ok(new
             {
-                return Results.Problem(
-                    detail: ex.Message,
-                    statusCode: 500,
-                    title: "下载视频时发生错误"
-                );
-            }
-
-            // If response has started, we can't change the status code
-            return Results.Empty;
+                success = false,
+                error = ex.Message,
+                errorType = ex.GetType().Name,
+                url = url
+            });
         }
         finally
         {

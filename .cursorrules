@@ -41,12 +41,56 @@ When engaging in conversations, especially for important decisions, feature disc
    - Decisions and rationale
    - Follow-up actions or TODOs
 
+## Development Workflow (Issue → PR → Merge)
+
+**Always follow the Issue → PR → Merge workflow for feature development:**
+
+1. **Before starting any new feature or significant change:**
+
+   - First create a GitHub Issue using `gh issue create` or guide the user to create one
+   - Include clear description, acceptance criteria, and technical approach
+   - Get the Issue number for reference
+
+2. **When implementing features:**
+
+   - Create a feature branch: `git checkout -b feature/issue-{number}-{short-description}`
+   - Use conventional commit messages: `feat:`, `fix:`, `refactor:`, etc.
+   - Reference the Issue in commit messages: `Closes #1` or `Fixes #1`
+   - Keep commits focused and atomic
+
+3. **After implementation:**
+
+   - Push the branch: `git push origin feature/issue-{number}-{short-description}`
+   - Create a Pull Request using `gh pr create` with:
+     - Clear title following conventional commits format
+     - Description linking to the Issue (`Closes #1`)
+     - List of changes made
+     - Testing checklist
+   - Guide the user through PR review and merge process
+
+4. **Branch naming conventions:**
+
+   - Features: `feature/issue-{number}-{description}`
+   - Bug fixes: `fix/issue-{number}-{description}`
+   - Refactoring: `refactor/issue-{number}-{description}`
+   - Hotfixes: `hotfix/{description}`
+
+5. **When user requests a new feature:**
+
+   - Remind them to create an Issue first (or help create it)
+   - Follow the workflow above
+   - Don't skip the Issue creation step even for small features
+
+6. **Exception:**
+   - Only skip Issue creation for trivial changes (typo fixes, formatting)
+   - For any code logic changes, always follow the full workflow
+
 ## Project Context
 
 This is a .NET 9.0 solution with:
 
 - **Lingua.Api**: ASP.NET Core Web API
-- **Lingua.Web**: Blazor Web App
+- **Lingua.Infrastructure**: Infrastructure layer with external service implementations
 - **Lingua.Core**: Shared core library with models and services
 
 ## Coding Standards
@@ -61,5 +105,5 @@ This is a .NET 9.0 solution with:
 
 - Keep business logic in the Core project
 - API controllers should be thin and delegate to services
-- Blazor components should focus on UI logic
+- Infrastructure implementations go in Lingua.Infrastructure
 - Shared models go in Lingua.Core/Models
