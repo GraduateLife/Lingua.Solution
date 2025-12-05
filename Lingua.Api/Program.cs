@@ -65,7 +65,7 @@ app.MapGet("/api/test/echo", (ILogger<Program> logger) =>
 
 // Video metadata endpoint (GET) - Returns metadata of already downloaded videos
 // Only checks for existing files, does not download
-app.MapGet("/api/video/download/test", async (
+app.MapGet("/api/download/metadata", async (
     string? url,
     IVideoDownloadService service,
     IDownloadDirectoryManager directoryManager,
@@ -158,7 +158,7 @@ static string FormatFileSize(long bytes)
 }
 
 // Video download endpoint (GET) - Downloads video and returns JSON metadata
-app.MapGet("/api/video/download", async (
+app.MapGet("/api/download", async (
     string? url,
     IVideoDownloadService service,
     ILogger<Program> logger,
@@ -355,8 +355,3 @@ app.MapPost("/api/video/download", async (
     .DisableRequestTimeout();
 
 app.Run();
-
-record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
-{
-    public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
-}

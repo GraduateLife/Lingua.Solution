@@ -1,5 +1,6 @@
 using Lingua.Core.Services;
 using Microsoft.Extensions.Logging;
+using System.IO;
 
 namespace Lingua.Infrastructure.Services;
 
@@ -87,7 +88,8 @@ public class VideoDownloadService : IVideoDownloadService
 
             // Return file stream directly - files in downloads folder are kept, not deleted
             // Use PersistentFileStream to ensure file is not deleted after streaming
-            return new PersistentFileStream(actualFilePath, _logger);
+            //FIXME: test standard FileStream
+            return new FileStream(actualFilePath, FileMode.Open, FileAccess.Read, FileShare.Read);
         }
         catch (OperationCanceledException)
         {
