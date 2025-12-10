@@ -23,15 +23,21 @@ public class YtDlpProcessExecutor : IYtDlpProcessExecutor
         CancellationToken cancellationToken = default)
     {
         var ytDlpPath = _toolPathFinder.FindToolPath("yt-dlp");
+        var ffmpegPath = _toolPathFinder.FindToolPath("ffmpeg");
         if (string.IsNullOrEmpty(ytDlpPath))
         {
             throw new InvalidOperationException("yt-dlp 未找到。请确保已安装 yt-dlp 并添加到 PATH 环境变量中。");
         }
+        if (string.IsNullOrEmpty(ffmpegPath))
+        {
+            throw new InvalidOperationException("ffmpeg 未找到。请确保已安装 ffmpeg 并添加到 PATH 环境变量中。");
+        }
 
         // Build yt-dlp command arguments
-        var arguments = $"-o \"{outputTemplate}\" --no-playlist --format \"best[ext=mp4]/best\" \"{videoUrl}\"";
+        // var arguments = $"-o \"{outputTemplate}\" --no-playlist \"{videoUrl}\"";
+        var arguments=$"{videoUrl} --ffmpeg-location \"{ffmpegPath}\"";
 
-        _logger.LogDebug("Executing: {YtDlpPath} {Arguments}", ytDlpPath, arguments);
+        _logger.LogInformation("Executing: {YtDlpPath} {Arguments}", ytDlpPath, arguments);
         _logger.LogInformation("Downloading video from: {VideoUrl} using yt-dlp", videoUrl);
 
         var processStartInfo = new ProcessStartInfo

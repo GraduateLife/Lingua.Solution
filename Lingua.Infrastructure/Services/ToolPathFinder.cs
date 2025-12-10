@@ -27,12 +27,6 @@ public class ToolPathFinder : IToolPathFinder
             return infrastructureToolsPath;
         }
 
-        // 3. 查找旧的 tools 目录（向后兼容）
-        var oldToolsPath = GetOldToolsPath(toolName);
-        if (!string.IsNullOrEmpty(oldToolsPath))
-        {
-            return oldToolsPath;
-        }
 
         // 4. 在 PATH 环境变量中查找
         var pathEnvResult = FindInPath(GetExecutableName(toolName));
@@ -90,64 +84,6 @@ public class ToolPathFinder : IToolPathFinder
                     {
                         _logger.LogInformation("Found {Tool} in Infrastructure Tools directory: {Path}", toolName, fullPath);
                         return fullPath;
-                    }
-                }
-                catch
-                {
-                    // Ignore path resolution errors
-                }
-            }
-        }
-
-        return null;
-    }
-
-    private string? GetOldToolsPath(string toolName)
-    {
-        var assemblyLocation = System.Reflection.Assembly.GetExecutingAssembly().Location;
-        var assemblyDirectory = Path.GetDirectoryName(assemblyLocation);
-        var baseDirectory = AppContext.BaseDirectory;
-
-        var executableNames = new[] { toolName, GetExecutableName(toolName) };
-
-        // Check output directory tools folder
-        if (!string.IsNullOrEmpty(baseDirectory))
-        {
-            var outputToolsPath = Path.Combine(baseDirectory, "tools");
-            foreach (var exeName in executableNames)
-            {
-                var fullPath = Path.Combine(outputToolsPath, exeName);
-                if (File.Exists(fullPath))
-                {
-                    _logger.LogInformation("Found {Tool} in output tools directory: {Path}", toolName, fullPath);
-                    return fullPath;
-                }
-            }
-        }
-
-        // Check solution root tools directory
-        if (!string.IsNullOrEmpty(assemblyDirectory))
-        {
-            var possiblePaths = new[]
-            {
-                Path.Combine(assemblyDirectory, "..", "..", "..", "..", "tools"),
-                Path.Combine(assemblyDirectory, "..", "..", "..", "..", "..", "tools"),
-                Path.Combine(Directory.GetCurrentDirectory(), "tools"),
-            };
-
-            foreach (var projectToolsPath in possiblePaths)
-            {
-                try
-                {
-                    var normalizedPath = Path.GetFullPath(projectToolsPath);
-                    foreach (var exeName in executableNames)
-                    {
-                        var fullPath = Path.Combine(normalizedPath, exeName);
-                        if (File.Exists(fullPath))
-                        {
-                            _logger.LogInformation("Found {Tool} in project tools directory: {Path}", toolName, fullPath);
-                            return fullPath;
-                        }
                     }
                 }
                 catch
